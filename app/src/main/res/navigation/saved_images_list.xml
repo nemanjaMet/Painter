@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/saved_images_list"
+    app:startDestination="@id/savedImagesListFragment">
+
+    <fragment
+        android:id="@+id/savedImagesListFragment"
+        android:name="com.example.painter.screens.saved_images_list.SavedImagesListFragment"
+        android:label="@string/title_saved_images_list"
+        tools:layout="@layout/screen_saved_images_list"/>
+
+</navigation>

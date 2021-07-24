@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/draw_board"
+        android:icon="@drawable/ic_draw_board"
+        android:title="@string/title_draw_board"
+        android:contentDescription="@string/desc_draw_board"
+        />
+
+    <item
+        android:id="@+id/saved_images_list"
+        android:icon="@drawable/ic_saved_images_list"
+        android:title="@string/title_saved_images_list"
+        android:contentDescription="@string/desc_saved_images_list"/>
+
+</menu>

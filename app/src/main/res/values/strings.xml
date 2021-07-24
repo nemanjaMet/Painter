@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">Painter</string>
+
+    <!-- Bottom navigation title -->
+    <string name="title_draw_board">Draw board</string>
+    <string name="title_saved_images_list">Saved images list</string>
+    <!-- Bottom navigation description -->
+    <string name="desc_draw_board">Draw board</string>
+    <string name="desc_saved_images_list">Saved images list</string>
+
 </resources>

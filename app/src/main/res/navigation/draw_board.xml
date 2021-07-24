@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/draw_board"
+    app:startDestination="@id/drawBoardFragment">
+
+
+    <fragment
+        android:id="@+id/drawBoardFragment"
+        android:name="com.example.painter.screens.draw_board.DrawBoardFragment"
+        android:label="@string/title_draw_board"
+        tools:layout="@layout/screen_draw_board"/>
+
+</navigation>
