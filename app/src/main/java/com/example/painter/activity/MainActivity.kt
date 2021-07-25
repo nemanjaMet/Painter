@@ -21,6 +21,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         setBottomNavigationBar()
+        setToolbar()
     }
 
 
@@ -44,6 +45,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onSupportNavigateUp(): Boolean {
         return navController.navigateUp(appBarConfiguration)
+    }
+
+    private fun setToolbar() {
+        //supportActionBar.
     }
 
 }

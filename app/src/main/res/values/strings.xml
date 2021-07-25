@@ -8,4 +8,19 @@
     <string name="desc_draw_board">Draw board</string>
     <string name="desc_saved_images_list">Saved images list</string>
 
+    <!-- Color picker -->
+    <string name="confirm_button">Confirm</string>
+    <string name="cancel_button">Cancel</string>
+
+    <!-- Toolbar menu title-->
+    <string name="title_undo">Undo</string>
+    <string name="title_redo">Redo</string>
+    <!-- Toolbar menu description -->
+    <string name="desc_undo">Undo</string>
+    <string name="desc_redo">Redo</string>
+
+    <!-- Animation settings -->
+    <integer name="slider_animation_duration">300</integer>
+    <integer name="color_palette_duration">300</integer>
+
 </resources>

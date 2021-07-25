@@ -59,4 +59,7 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.3'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
 
+    // Color picker -> https://github.com/skydoves/ColorPickerView
+    implementation "com.github.skydoves:colorpickerview:2.2.3"
+
 }
