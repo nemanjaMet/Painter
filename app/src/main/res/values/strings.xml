@@ -23,4 +23,11 @@
     <integer name="slider_animation_duration">300</integer>
     <integer name="color_palette_duration">300</integer>
 
+    <!-- Alert dialog -->
+    <string name="positive_btn">Yes</string>
+    <string name="negative_btn">No</string>
+    <string name="cancel_btn">Cancel</string>
+    <string name="title_save_image_from_board">Save image</string>
+    <string name="title_save_image_hint_board">Enter name for the image</string>
+
 </resources>

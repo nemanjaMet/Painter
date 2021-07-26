@@ -62,4 +62,7 @@ dependencies {
     // Color picker -> https://github.com/skydoves/ColorPickerView
     implementation "com.github.skydoves:colorpickerview:2.2.3"
 
+    // Gson
+    implementation 'com.google.code.gson:gson:2.8.6'
+
 }

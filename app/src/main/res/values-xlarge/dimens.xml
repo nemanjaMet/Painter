@@ -1,6 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
+    <dimen name="text_size_2">4sp</dimen>
+    <dimen name="text_size_5">10sp</dimen>
+    <dimen name="text_size_8">16sp</dimen>
+    <dimen name="text_size_10">20sp</dimen>
+    <dimen name="text_size_12">24sp</dimen>
+    <dimen name="text_size_13">26dp</dimen>
+    <dimen name="text_size_14">28sp</dimen>
+    <dimen name="text_size_16">32sp</dimen>
+    <dimen name="text_size_18">36sp</dimen>
+    <dimen name="text_size_20">40sp</dimen>
+    <dimen name="text_size_24">48sp</dimen>
+    <dimen name="text_size_28">56sp</dimen>
+    <dimen name="text_size_30">60sp</dimen>
+    <dimen name="text_size_32">64sp</dimen>
+    <dimen name="text_size_48">96sp</dimen>
+    <dimen name="text_size_64">128sp</dimen>
+
     <dimen name="dimen_size_1">2dp</dimen>
     <dimen name="dimen_size_2">4dp</dimen>
     <dimen name="dimen_size_3">6dp</dimen>

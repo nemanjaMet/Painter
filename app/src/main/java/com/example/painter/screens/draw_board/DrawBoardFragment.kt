@@ -2,15 +2,19 @@ package com.example.painter.screens.draw_board
 
 import android.animation.ObjectAnimator
 import android.os.Bundle
+import android.util.Size
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.view.doOnPreDraw
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import com.example.painter.R
 import com.example.painter.constants.Constants
 import com.example.painter.databinding.ScreenDrawBoardBinding
+import com.example.painter.helpers.AlertDialogManager
+import com.example.painter.shared_view_models.MainViewModel
 import com.google.android.material.slider.Slider
 import com.skydoves.colorpickerview.ColorPickerDialog
 import com.skydoves.colorpickerview.listeners.ColorEnvelopeListener
@@ -21,6 +25,7 @@ class DrawBoardFragment : Fragment() {
     private var _binding: ScreenDrawBoardBinding? = null
     private val binding get() = _binding
     private val viewModel: DrawBoardViewModel by viewModels()
+    private val mainViewModel: MainViewModel by activityViewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -51,6 +56,8 @@ class DrawBoardFragment : Fragment() {
     }
 
     private fun setOnClickListeners() {
+        setToolbarClickListener()
+
 //        binding?.btnShowHideBoardMenu?.setOnClickListener {
 //            onShowHideBoardMenuClick()
 //        }
@@ -79,10 +86,14 @@ class DrawBoardFragment : Fragment() {
                 showPenSizeSlider()
 
         }
-    }
 
-    private fun onShowHideBoardMenuClick() {
+        binding?.btnSaveBoard?.setOnClickListener {
+            onSaveBoardClick()
+        }
 
+        binding?.btnSetCanvasSize?.setOnClickListener {
+            onSetCanvasSizeClick()
+        }
     }
 
     private fun onSelectPenClick() {
@@ -99,6 +110,33 @@ class DrawBoardFragment : Fragment() {
 
     private fun onColorPickerClick() {
         openColorPicker()
+    }
+
+    private fun onSaveBoardClick() {
+
+        AlertDialogManager.openAlertDialogWithInputField(requireContext(), getString(R.string.title_save_image_from_board), getString(R.string.title_save_image_hint_board), object: AlertDialogManager.Companion.AlertDialogListener {
+            override fun onAlertDialogConfirm(value: String, requestCode: Int) {
+
+                if (requestCode == AlertDialogManager.GET_SAVED_IMAGE_NAME) {
+                    binding?.viewDrawBoard?.let {  board ->
+
+                        val canvasSize = Size(board.width, board.height)
+
+                        mainViewModel.addNewDrawing(board.getDrawing(), value, canvasSize)
+                        mainViewModel.saveDrawings()
+
+                        board.clearBoard()
+                    }
+                }
+
+            }
+
+        }, AlertDialogManager.GET_SAVED_IMAGE_NAME)
+
+    }
+
+    private fun onSetCanvasSizeClick() {
+
     }
 
     private fun openColorPicker() {
@@ -167,19 +205,24 @@ class DrawBoardFragment : Fragment() {
             it.translationX = - it.width.toFloat()
         }
 
-        binding?.sliderPenSize?.addOnChangeListener(object : Slider.OnChangeListener {
-            override fun onValueChange(slider: Slider, value: Float, fromUser: Boolean) {
-                viewModel.setPenSizePercent(value)
-            }
-        })
+        binding?.sliderPenSize?.addOnChangeListener(Slider.OnChangeListener { slider, value, fromUser -> viewModel.setPenSizePercent(value) })
     }
 
-//    private fun showColorPalette() {
-//
-//    }
-//
-//    private fun hideColorPalette() {
-//
-//    }
+    private fun setToolbarClickListener () {
+        binding?.toolbar?.setOnMenuItemClickListener { menuItem ->
+
+            when(menuItem.itemId) {
+                R.id.btn_undo -> {
+                    binding?.viewDrawBoard?.undo()
+                }
+
+                R.id.btn_redo -> {
+                    binding?.viewDrawBoard?.redo()
+                }
+            }
+
+            true
+        }
+    }
 
 }

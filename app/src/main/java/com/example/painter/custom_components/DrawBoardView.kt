@@ -2,13 +2,16 @@ package com.example.painter.custom_components
 
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
 import android.util.AttributeSet
+import android.util.Size
 import android.view.MotionEvent
 import android.view.View
 import androidx.core.view.doOnPreDraw
 import com.example.painter.constants.Constants
+import com.example.painter.constants.DrawingMode
 import com.example.painter.models.DrawPath
 
 class DrawBoardView @JvmOverloads constructor(
@@ -19,13 +22,17 @@ class DrawBoardView @JvmOverloads constructor(
         private var MAX_PEN_SIZE_WIDTH_PERCENT = 0.05f
     }
 
+    private var undoPaths = arrayListOf<DrawPath>()
     private var drawing = arrayListOf<DrawPath>() // cuvamo listu path-va za crtanje
     private var path = Path() // path koji nam sluzi za crtanje
     private var paint = Paint()
     private var penSize = 1f // velicina olovke za crtanje
-    private var isRubberSelected = false // fleg koji nam oznacava da li je gumica trenutno selektovana
+    //private var isRubberSelected = false // fleg koji nam oznacava da li je gumica trenutno selektovana
     private var boardColor = Constants.DEFAULT_BOARD_COLOR
     private var penColor = Constants.DEFAULT_PEN_COLOR
+    private var drawingMode = DrawingMode.PEN
+    private var canvasSize = Size(0,0)
+    private var isDrawingEnabled = true
     //private var isOrientationLandscape = false
     //private var boardCanvas: Canvas? = null
 
@@ -46,6 +53,13 @@ class DrawBoardView @JvmOverloads constructor(
     // vrsimo kompletno iscrtavanje na tabli
     private fun drawBoard(canvas: Canvas?) {
 
+        // skaliramo tablu
+        if (!isDrawingEnabled) {
+            scaleBoard(canvas)
+        }
+
+
+
         for (drawPath in drawing) {
 
             // ako je ovo path za brisanje onda setujemo boju table za paint
@@ -58,12 +72,48 @@ class DrawBoardView @JvmOverloads constructor(
         canvas?.drawPath(path, paint)
     }
 
+    private fun scaleBoard(canvas: Canvas?) {
+        val matrix = Matrix()
+
+        val wRatio = width.toFloat() / canvasSize.width
+        val hRatio = height.toFloat() / canvasSize.height
+
+        //Log.d("drawBoard", "wRatio: $wRatio, hRatio: $hRatio")
+
+        matrix.setScale(wRatio, hRatio)
+        canvas?.setMatrix(matrix)
+    }
+
     // setujemo podeavanja za cetkicu
-    private fun setPaint() {
+    private fun setPaint(drawMode: DrawingMode = drawingMode) {
         paint.isAntiAlias = true
-        paint.color = penColor
         paint.style = Paint.Style.STROKE
-        paint.strokeWidth = penSize
+        paint.strokeJoin = Paint.Join.ROUND
+        paint.strokeCap = Paint.Cap.ROUND
+
+        when (drawMode) {
+
+            DrawingMode.PEN -> {
+                paint.strokeWidth = penSize
+                paint.color = penColor
+                paint.alpha = 0xFF
+            }
+
+            DrawingMode.BRUSH -> {
+                paint.strokeWidth = penSize
+                paint.color = penColor
+                paint.alpha = 0x80
+            }
+
+            DrawingMode.RUBBER -> {
+                paint.color = boardColor
+                paint.strokeWidth = width * 0.05f
+                paint.alpha = 0xFF
+            }
+
+        }
+
+
     }
 
     // setujemo boju table
@@ -79,6 +129,9 @@ class DrawBoardView @JvmOverloads constructor(
     }
 
     override fun onTouchEvent(event: MotionEvent?): Boolean {
+
+        if (!isDrawingEnabled)
+            return false
 
         when (event?.action) {
             MotionEvent.ACTION_DOWN -> {
@@ -97,6 +150,11 @@ class DrawBoardView @JvmOverloads constructor(
     }
 
     private fun onTouchStart(x: Float, y: Float) {
+
+        // ukoliko postoji lista path-ova unda je klirujemo (ponistavamo undo mogucnost, zato sto je doslo do promena)
+        if (undoPaths.isNotEmpty())
+            undoPaths.clear()
+
         path.moveTo(x, y)
     }
 
@@ -108,6 +166,8 @@ class DrawBoardView @JvmOverloads constructor(
 
     private fun onTouchUp(x: Float, y: Float) {
         path.moveTo(x, y)
+
+        saveCurrentPath()
     }
 
     // menjamo boju table
@@ -120,21 +180,22 @@ class DrawBoardView @JvmOverloads constructor(
     }
 
     // setujemo fleg da je gumica selektovana
-    private fun enableRubber() {
-        isRubberSelected = true
-    }
+//    private fun enableRubber() {
+//        drawingMode = DrawingMode.RUBBER
+//    }
 
     // setujemo fleg da je gumica deselektovana
-    private fun disableRubber() {
-        isRubberSelected = false
+//    private fun disableRubber() {
+//
+//    }
+
+    private fun isRubberSelected(): Boolean {
+        return drawingMode == DrawingMode.RUBBER
     }
 
     // setujemo podesavanja za gumicu
     private fun onRubberSelected() {
-        enableRubber()
-
-        paint.color = boardColor
-        paint.strokeWidth = width * 0.05f
+        drawingMode = DrawingMode.RUBBER
 
 //        if (isOrientationLandscape) {
 //            paint.strokeWidth = width * 0.1f
@@ -142,48 +203,50 @@ class DrawBoardView @JvmOverloads constructor(
 //            paint.strokeWidth = width * 0.1f
 //        }
 
+        setPaint()
     }
 
     // selektujemo olovku
     fun selectPen() {
-        saveCurrentPath()
+        //saveCurrentPath()
 
-        // ukoliko je gumica selektovana onda je deselektujemo
-        if (isRubberSelected) {
-            disableRubber()
-            setPaint()
-        }
+//        // ukoliko je gumica selektovana onda je deselektujemo
+//        if (isRubberSelected()) {
+//            disableRubber()
+//        }
 
-
+        drawingMode = DrawingMode.PEN
+        setPaint()
     }
 
     // selektujemo cetkicu
     fun selectBrush() {
-        saveCurrentPath()
+        //saveCurrentPath()
 
-        // ukoliko je gumica selektovana onda je deselektujemo
-        if (isRubberSelected) {
-            disableRubber()
-            setPaint()
-        }
+//        // ukoliko je gumica selektovana onda je deselektujemo
+//        if (isRubberSelected()) {
+//            disableRubber()
+//        }
 
+        drawingMode = DrawingMode.BRUSH
+        setPaint()
     }
 
     // selektujemo gumicu
     fun selectRubber() {
-        saveCurrentPath()
+        //saveCurrentPath()
 
         onRubberSelected()
     }
 
     // setujemo boju za olovku i cetkicu
     fun setPenColor(color: Int) {
-        saveCurrentPath()
+        //saveCurrentPath()
 
         // ukoliko je gumica selektovana onda je deselektujemo
-        if (isRubberSelected) {
-            disableRubber()
-        }
+//        if (isRubberSelected()) {
+//            disableRubber()
+//        }
 
         penColor = color
         setPaint()
@@ -197,20 +260,70 @@ class DrawBoardView @JvmOverloads constructor(
     private fun saveCurrentPath() {
 
         if (!path.isEmpty) {
-            drawing.add(DrawPath(path, Paint(paint), isRubberSelected))
+            drawing.add(DrawPath(Path(path), Paint(paint), isRubberSelected()))
 
-            path = Path()
+            //path = Path()
+            path.reset()
         }
 
     }
 
     // setujemo velicinu olovke i cetkice
     fun setPenSize(percent: Float) {
-        saveCurrentPath()
+        //saveCurrentPath()
 
         penSize = (width * MAX_PEN_SIZE_WIDTH_PERCENT) * (percent * 0.01f)
 
         setPaint()
+    }
+
+    fun undo() {
+        //saveCurrentPath()
+
+        if (drawing.isNotEmpty()) {
+            val lastPath = drawing.removeLast()
+
+            undoPaths.add(lastPath)
+
+            invalidate()
+        }
+    }
+
+    fun redo() {
+        if (undoPaths.isNotEmpty()) {
+            val lastPath = undoPaths.removeLast()
+
+            drawing.add(lastPath)
+
+            invalidate()
+        }
+    }
+
+    fun clearBoard() {
+        drawing.clear()
+        path.reset()
+        invalidate()
+    }
+
+    fun getDrawing(): MutableList<DrawPath> {
+        return drawing
+    }
+
+    fun setDrawing(drawingToDraw: MutableList<DrawPath>) {
+        drawing.clear()
+        path.reset()
+
+        drawing.addAll(drawingToDraw)
+
+        invalidate()
+    }
+
+    fun setIsDrawingEnabled(isEnabled: Boolean) {
+        isDrawingEnabled = isEnabled
+    }
+
+    fun setCanvasSize(size: Size) {
+        canvasSize = size
     }
 
 }
