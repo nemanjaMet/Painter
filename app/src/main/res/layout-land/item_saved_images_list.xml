@@ -12,14 +12,14 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintDimensionRatio="h,0.8"
+        app:layout_constraintDimensionRatio="h,0.65"
         app:cardCornerRadius="@dimen/dimen_size_14"
         android:elevation="@dimen/dimen_size_8">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-          android:background="@color/grey"
+            android:background="@color/grey"
             android:id="@+id/cl_holder_saved_image_list">
 
             <TextView

@@ -11,6 +11,7 @@
     <!-- Color picker -->
     <string name="confirm_button">Confirm</string>
     <string name="cancel_button">Cancel</string>
+    <string name="title_color_picker">Color picker</string>
 
     <!-- Toolbar menu title-->
     <string name="title_undo">Undo</string>
@@ -18,6 +19,11 @@
     <!-- Toolbar menu description -->
     <string name="desc_undo">Undo</string>
     <string name="desc_redo">Redo</string>
+
+    <!-- Saved Item List Item Menu -->
+    <string name="title_export">Export</string>
+    <!-- Saved Item List Item Menu -->
+    <string name="desc_export">Export</string>
 
     <!-- Animation settings -->
     <integer name="slider_animation_duration">300</integer>
@@ -29,5 +35,30 @@
     <string name="cancel_btn">Cancel</string>
     <string name="title_save_image_from_board">Save image</string>
     <string name="title_save_image_hint_board">Enter name for the image</string>
+    <string name="go_to_settings">Go to settings</string>
+
+    <!-- Permission -->
+    <string name="permission_write_external_storage"> Write external_storage permission is required for the application to perform this action. Would you like to allow this permission? </string>
+    <string name="permission_write_external_storage_denied"> Write external_storage permission is required for the application to perform this action. Please find this permission in the application settings and allow it. </string>
+    <string name="permission_denied">Permission denied</string>
+
+    <!-- Loading indicator -->
+    <string name="exporting_image">Exporting image…</string>
+    <string name="saving">Saving…</string>
+    <string name="image_saved">Image is saved to gallery</string>
+
+    <!-- SnackBar -->
+    <string name="snackBar_open_btn">Open</string>
+
+    <!-- Dialog set canvas dimension -->
+    <string name="input_width">Width</string>
+    <string name="input_height">Height</string>
+    <string name="x_label">X</string>
+    <string name="set_btn">Set</string>
+
+    <!-- Error messages for canvas dimension -->
+    <string name="error_invalid_width">Invalid width</string>
+    <string name="error_invalid_height">Invalid height</string>
+    <string name="error_invalid_size">Invalid size</string>
 
 </resources>

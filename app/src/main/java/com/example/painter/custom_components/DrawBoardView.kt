@@ -1,18 +1,19 @@
 package com.example.painter.custom_components
 
 import android.content.Context
-import android.graphics.Canvas
-import android.graphics.Matrix
-import android.graphics.Paint
-import android.graphics.Path
+import android.graphics.*
 import android.util.AttributeSet
+import android.util.Log
 import android.util.Size
 import android.view.MotionEvent
 import android.view.View
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.graphics.ColorUtils
 import androidx.core.view.doOnPreDraw
 import com.example.painter.constants.Constants
+import com.example.painter.constants.CustomPathMode
 import com.example.painter.constants.DrawingMode
-import com.example.painter.models.DrawPath
+import com.example.painter.models.*
 
 class DrawBoardView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
@@ -22,19 +23,26 @@ class DrawBoardView @JvmOverloads constructor(
         private var MAX_PEN_SIZE_WIDTH_PERCENT = 0.05f
     }
 
-    private var undoPaths = arrayListOf<DrawPath>()
-    private var drawing = arrayListOf<DrawPath>() // cuvamo listu path-va za crtanje
-    private var path = Path() // path koji nam sluzi za crtanje
+    private var undoPaths = arrayListOf<Drawing>()
+
     private var paint = Paint()
     private var penSize = 1f // velicina olovke za crtanje
-    //private var isRubberSelected = false // fleg koji nam oznacava da li je gumica trenutno selektovana
+
     private var boardColor = Constants.DEFAULT_BOARD_COLOR
     private var penColor = Constants.DEFAULT_PEN_COLOR
     private var drawingMode = DrawingMode.PEN
-    private var canvasSize = Size(0,0)
+    private var canvasSize = CanvasSize(0,0)
     private var isDrawingEnabled = true
-    //private var isOrientationLandscape = false
-    //private var boardCanvas: Canvas? = null
+
+    private var path = CustomPath()
+    private var newDrawing = mutableListOf<Float>()
+    private var painterDrawing = mutableListOf<Drawing>()
+    private var lastPoint = PointF(0f,0f)
+    private val oldPaint = CustomPaint()
+    private var painterCanvas: Canvas? = null
+    private var bitmap: Bitmap? = null
+    private var boardMatrix: Matrix = Matrix()
+    private var boardPaint: Paint = Paint()
 
     init {
         setPaint()
@@ -42,12 +50,43 @@ class DrawBoardView @JvmOverloads constructor(
         initPenSize()
     }
 
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        Log.d("onSizeChanged", "newSize: ${Size(w,h)}, oldSize: ${Size(oldw,oldh)}")
+
+        bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888).apply {
+            this.eraseColor(boardColor)
+            painterCanvas = Canvas(this)
+        }
+
+        if (canvasSize.width == 0 || canvasSize.height == 0) {
+            canvasSize.width = w
+            canvasSize.height = h
+        }
+
+        super.onSizeChanged(w, h, oldw, oldh)
+    }
+
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
 
         //canvas?.drawPath(path, paint)
         //boardCanvas = canvas
-        drawBoard(canvas)
+        //scaleBoard(canvas)
+
+        Log.d("drawBoardView", "onDraw")
+
+        //drawBoard(canvas)
+        bitmap?.let {
+            canvas?.drawBitmap(it, boardMatrix, boardPaint)
+
+            canvas?.save()
+            scaleBoard(canvas)
+            canvas?.drawPath(path.getPath(), paint)
+            canvas?.restore()
+        }
+
+       //canvas?.drawPath(path.getPath(), paint)
+
     }
 
     // vrsimo kompletno iscrtavanje na tabli
@@ -58,18 +97,33 @@ class DrawBoardView @JvmOverloads constructor(
             scaleBoard(canvas)
         }
 
+        oldPaint.savePaint(paint)
 
-
-        for (drawPath in drawing) {
+        for (drawPath in painterDrawing) {
 
             // ako je ovo path za brisanje onda setujemo boju table za paint
             if (drawPath.isDeletePath)
                 drawPath.paint.color = boardColor
 
-            canvas?.drawPath(drawPath.path, drawPath.paint)
+            drawPath.paint.setPaint(paint)
+
+            painterDrawing.forEach {
+                it.paint.setPaint(paint)
+                canvas?.drawLines(it.points.toFloatArray(), paint)
+            }
         }
 
-        canvas?.drawPath(path, paint)
+
+        oldPaint.setPaint(paint)
+        canvas?.drawLines(newDrawing.toFloatArray(), paint)
+    }
+
+    private fun drawPathLine() {
+        painterCanvas?.save()
+        scaleBoard(painterCanvas)
+        painterCanvas?.drawPath(path.getPath(), paint)
+        painterCanvas?.restore()
+        invalidate()
     }
 
     private fun scaleBoard(canvas: Canvas?) {
@@ -82,6 +136,7 @@ class DrawBoardView @JvmOverloads constructor(
 
         matrix.setScale(wRatio, hRatio)
         canvas?.setMatrix(matrix)
+
     }
 
     // setujemo podeavanja za cetkicu
@@ -95,20 +150,23 @@ class DrawBoardView @JvmOverloads constructor(
 
             DrawingMode.PEN -> {
                 paint.strokeWidth = penSize
-                paint.color = penColor
-                paint.alpha = 0xFF
+                //paint.color = penColor
+                //paint.alpha = 0xFF
+                paint.color = ColorUtils.setAlphaComponent(penColor, 0xFF)
             }
 
             DrawingMode.BRUSH -> {
                 paint.strokeWidth = penSize
-                paint.color = penColor
-                paint.alpha = 0x80
+                //paint.color = penColor
+                //paint.alpha = 0x80
+                paint.color = ColorUtils.setAlphaComponent(penColor, 0x80)
             }
 
             DrawingMode.RUBBER -> {
                 paint.color = boardColor
                 paint.strokeWidth = width * 0.05f
-                paint.alpha = 0xFF
+                //paint.alpha = 0xFF
+                //ColorUtils.setAlphaComponent(penColor, 0xFF)
             }
 
         }
@@ -135,18 +193,28 @@ class DrawBoardView @JvmOverloads constructor(
 
         when (event?.action) {
             MotionEvent.ACTION_DOWN -> {
-                onTouchStart(event.x, event.y)
+                val scaledPoint = getScaledPoint(event.x, event.y)
+                onTouchStart(scaledPoint.x, scaledPoint.y)
             }
             MotionEvent.ACTION_MOVE -> {
-                onTouchMove(event.x, event.y)
+                val scaledPoint = getScaledPoint(event.x, event.y)
+                onTouchMove(scaledPoint.x, scaledPoint.y)
             }
             MotionEvent.ACTION_UP -> {
-                onTouchUp(event.x, event.y)
+                val scaledPoint = getScaledPoint(event.x, event.y)
+                onTouchUp(scaledPoint.x, scaledPoint.y)
             }
         }
 
         //return super.onTouchEvent(event)
         return true
+    }
+
+    private fun getScaledPoint(x: Float, y: Float): PointF {
+        val scaledX = x * (canvasSize.width / width.toFloat())
+        val scaledY = y * (canvasSize.height / height.toFloat())
+
+        return PointF(scaledX, scaledY)
     }
 
     private fun onTouchStart(x: Float, y: Float) {
@@ -155,18 +223,41 @@ class DrawBoardView @JvmOverloads constructor(
         if (undoPaths.isNotEmpty())
             undoPaths.clear()
 
-        path.moveTo(x, y)
+        newDrawing.add(x)
+        newDrawing.add(y)
+
+        path.add(PointF(x,y), CustomPathMode.MOVE_TO)
     }
 
     private fun onTouchMove(x: Float, y: Float) {
-        path.lineTo(x, y)
+        if (lastPoint.x != 0f || lastPoint.y != 0f) {
+            newDrawing.add(lastPoint.x)
+            newDrawing.add(lastPoint.y)
+        }
+
+        newDrawing.add(x)
+        newDrawing.add(y)
+
+        lastPoint.set(x, y)
+
+        //painterCanvas?.drawLines(newDrawing.toFloatArray(), paint)
+
+        path.add(PointF(x,y), CustomPathMode.LINE_TO)
+
+        //drawPathLine()
 
         invalidate()
     }
 
     private fun onTouchUp(x: Float, y: Float) {
-        path.moveTo(x, y)
+        newDrawing.add(x)
+        newDrawing.add(y)
 
+        lastPoint.set(0f,0f)
+
+        path.add(PointF(x,y), CustomPathMode.MOVE_TO)
+
+        drawPathLine()
         saveCurrentPath()
     }
 
@@ -179,16 +270,6 @@ class DrawBoardView @JvmOverloads constructor(
         invalidate()
     }
 
-    // setujemo fleg da je gumica selektovana
-//    private fun enableRubber() {
-//        drawingMode = DrawingMode.RUBBER
-//    }
-
-    // setujemo fleg da je gumica deselektovana
-//    private fun disableRubber() {
-//
-//    }
-
     private fun isRubberSelected(): Boolean {
         return drawingMode == DrawingMode.RUBBER
     }
@@ -196,58 +277,28 @@ class DrawBoardView @JvmOverloads constructor(
     // setujemo podesavanja za gumicu
     private fun onRubberSelected() {
         drawingMode = DrawingMode.RUBBER
-
-//        if (isOrientationLandscape) {
-//            paint.strokeWidth = width * 0.1f
-//        } else {
-//            paint.strokeWidth = width * 0.1f
-//        }
-
         setPaint()
     }
 
     // selektujemo olovku
     fun selectPen() {
-        //saveCurrentPath()
-
-//        // ukoliko je gumica selektovana onda je deselektujemo
-//        if (isRubberSelected()) {
-//            disableRubber()
-//        }
-
         drawingMode = DrawingMode.PEN
         setPaint()
     }
 
     // selektujemo cetkicu
     fun selectBrush() {
-        //saveCurrentPath()
-
-//        // ukoliko je gumica selektovana onda je deselektujemo
-//        if (isRubberSelected()) {
-//            disableRubber()
-//        }
-
         drawingMode = DrawingMode.BRUSH
         setPaint()
     }
 
     // selektujemo gumicu
     fun selectRubber() {
-        //saveCurrentPath()
-
         onRubberSelected()
     }
 
     // setujemo boju za olovku i cetkicu
     fun setPenColor(color: Int) {
-        //saveCurrentPath()
-
-        // ukoliko je gumica selektovana onda je deselektujemo
-//        if (isRubberSelected()) {
-//            disableRubber()
-//        }
-
         penColor = color
         setPaint()
     }
@@ -258,30 +309,25 @@ class DrawBoardView @JvmOverloads constructor(
 
     // cuvamo trenutni path za crtanje u listu
     private fun saveCurrentPath() {
+        if (newDrawing.isNotEmpty()) {
+            painterDrawing.add(Drawing(newDrawing, CustomPaint(paint.strokeWidth, paint.color, paint.alpha), isRubberSelected(), path.copy()))
 
-        if (!path.isEmpty) {
-            drawing.add(DrawPath(Path(path), Paint(paint), isRubberSelected()))
-
-            //path = Path()
             path.reset()
+            newDrawing = mutableListOf()
         }
 
     }
 
     // setujemo velicinu olovke i cetkice
     fun setPenSize(percent: Float) {
-        //saveCurrentPath()
-
         penSize = (width * MAX_PEN_SIZE_WIDTH_PERCENT) * (percent * 0.01f)
-
         setPaint()
     }
 
     fun undo() {
-        //saveCurrentPath()
 
-        if (drawing.isNotEmpty()) {
-            val lastPath = drawing.removeLast()
+        if (painterDrawing.isNotEmpty()) {
+            val lastPath = painterDrawing.removeLast()
 
             undoPaths.add(lastPath)
 
@@ -293,37 +339,65 @@ class DrawBoardView @JvmOverloads constructor(
         if (undoPaths.isNotEmpty()) {
             val lastPath = undoPaths.removeLast()
 
-            drawing.add(lastPath)
+            painterDrawing.add(lastPath)
 
             invalidate()
         }
     }
 
     fun clearBoard() {
-        drawing.clear()
-        path.reset()
+        painterDrawing = mutableListOf() // .clear()
+        newDrawing.clear()
         invalidate()
     }
 
-    fun getDrawing(): MutableList<DrawPath> {
-        return drawing
+    fun getDrawing(): MutableList<Drawing> {
+        return painterDrawing
     }
 
-    fun setDrawing(drawingToDraw: MutableList<DrawPath>) {
-        drawing.clear()
-        path.reset()
+    fun setDrawing(drawingToDraw: MutableList<Drawing>) {
+        painterDrawing.clear()
+        newDrawing.clear()
 
-        drawing.addAll(drawingToDraw)
+        painterDrawing.addAll(drawingToDraw)
 
         invalidate()
+    }
+
+
+    fun setPaint(newPaint: Paint) {
+        paint = newPaint
     }
 
     fun setIsDrawingEnabled(isEnabled: Boolean) {
         isDrawingEnabled = isEnabled
     }
 
-    fun setCanvasSize(size: Size) {
+    fun setCanvasSize(size: CanvasSize) {
         canvasSize = size
+
+        setCanvasAspectRatio()
+    }
+
+    fun getCanvasSize(): CanvasSize {
+        return canvasSize
+    }
+
+    fun getBitmap(): Bitmap? {
+        return bitmap
+    }
+
+    private fun setCanvasAspectRatio() {
+
+        val layoutParams = ConstraintLayout.LayoutParams(0, 0)
+        layoutParams.leftToLeft = ConstraintLayout.LayoutParams.PARENT_ID
+        layoutParams.rightToRight = ConstraintLayout.LayoutParams.PARENT_ID
+        layoutParams.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+        layoutParams.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+
+        layoutParams.dimensionRatio = "${canvasSize.width}:${canvasSize.height}"
+
+        this.layoutParams = layoutParams
     }
 
 }
