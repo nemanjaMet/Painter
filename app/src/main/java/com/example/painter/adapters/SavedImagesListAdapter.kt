@@ -1,29 +1,18 @@
 package com.example.painter.adapters
 
 import android.content.Context
-import android.util.Log
-import android.util.Size
 import android.view.LayoutInflater
-import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.PopupMenu
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.core.view.doOnPreDraw
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
 import com.example.painter.R
-import com.example.painter.custom_components.DrawBoardView
-import com.example.painter.helpers.PainterManager
-import com.example.painter.models.CanvasSize
 import com.example.painter.models.SavedDrawing
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 
 
 class SavedImagesListAdapter(private var context: Context, private var savedDrawings: MutableList<SavedDrawing>, private var listener: SavedImagesListAdapterInterface? = null): RecyclerView.Adapter<SavedImagesListAdapter.SavedImagesListViewHolder>() {
@@ -42,46 +31,36 @@ class SavedImagesListAdapter(private var context: Context, private var savedDraw
 
         val canvasSize = savedDrawing.canvasSize
 
+        // setujemo podatke za title, canvas size i date
         holder.tvTitle.text = savedDrawing.title
-        holder.tvSize.text = ("${canvasSize.width}x${canvasSize.height}")
-        holder.tvDate.text = savedDrawing.date
+        holder.tvSize.text = ("${context.getString(R.string.txt_size)}: ${canvasSize.width}x${canvasSize.height}")
+        holder.tvDate.text = ("${context.getString(R.string.txt_date)}: ${savedDrawing.date}")
 
-        //holder.viewBoardThumbnail.layoutParams = getLayoutParamsForThumbnail(canvasSize)
-
-        holder.viewBoardThumbnail.setIsDrawingEnabled(false)
-        //holder.viewBoardThumbnail.setCanvasSize(savedDrawing.canvasSize)
-
-//        if (position <= 0)
-        //holder.viewBoardThumbnail.setDrawing(savedDrawing.drawings)
-        //if (position == 0)
-        //holder.ivDrawBoard.setImageBitmap(PainterManager.createBitmap(Size(100,100), savedDrawing.drawings))
-
-        // .diskCacheStrategy(DiskCacheStrategy.NONE).skipMemoryCache(true) / /.apply(RequestOptions.centerCropTransform())
-        holder.viewBoardThumbnail.visibility = View.GONE
+        // Ucitavamo thumbnail za sacuvani crtez
         Glide.with(context).load(savedDrawing.thumbnailPath).apply(RequestOptions.centerCropTransform()).centerCrop().into(holder.ivDrawBoard)
 
+        // setujemo long click listener za overflow menu (export image)
         holder.clHolder.setOnLongClickListener {
-
             showPopupMenu(holder.ivDrawBoard, position)
-
             true
         }
 
     }
 
-    private fun getLayoutParamsForThumbnail(canvasSize: CanvasSize): ViewGroup.LayoutParams {
+//    private fun getLayoutParamsForThumbnail(canvasSize: CanvasSize): ViewGroup.LayoutParams {
+//
+//        val layoutParams = ConstraintLayout.LayoutParams(0, 0)
+//        layoutParams.leftToLeft = ConstraintLayout.LayoutParams.PARENT_ID
+//        layoutParams.rightToRight = ConstraintLayout.LayoutParams.PARENT_ID
+//        layoutParams.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+//        layoutParams.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+//
+//        layoutParams.dimensionRatio = "${canvasSize.width}:${canvasSize.height}"
+//
+//        return layoutParams
+//    }
 
-        val layoutParams = ConstraintLayout.LayoutParams(0, 0)
-        layoutParams.leftToLeft = ConstraintLayout.LayoutParams.PARENT_ID
-        layoutParams.rightToRight = ConstraintLayout.LayoutParams.PARENT_ID
-        layoutParams.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
-        layoutParams.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
-
-        layoutParams.dimensionRatio = "${canvasSize.width}:${canvasSize.height}"
-
-        return layoutParams
-    }
-
+    // setujemo overflow menu za export slike
     private fun showPopupMenu(view: View, position: Int) {
         val popup = PopupMenu(context, view)
         popup.inflate(R.menu.menu_saved_item_list_item)
@@ -99,6 +78,9 @@ class SavedImagesListAdapter(private var context: Context, private var savedDraw
         popup.show()
     }
 
+    /**
+     * funkcija za setovanje nove liste
+     */
     fun refreshList(savedDrawings: MutableList<SavedDrawing>) {
         this.savedDrawings.clear()
 
@@ -114,7 +96,7 @@ class SavedImagesListAdapter(private var context: Context, private var savedDraw
     class SavedImagesListViewHolder(view: View): RecyclerView.ViewHolder(view) {
         val clHolder: ConstraintLayout = view.findViewById(R.id.cl_holder_saved_image_list)
         val tvTitle: TextView = view.findViewById(R.id.tv_title_saved_images_list_item)
-        val viewBoardThumbnail: DrawBoardView = view.findViewById(R.id.view_draw_board)
+        //val viewBoardThumbnail: DrawBoardView = view.findViewById(R.id.view_draw_board)
         val ivDrawBoard: ImageView = view.findViewById(R.id.iv_draw_board)
         val tvSize: TextView = view.findViewById(R.id.tv_size_saved_images_list_item)
         val tvDate: TextView = view.findViewById(R.id.tv_date_saved_images_list_item)

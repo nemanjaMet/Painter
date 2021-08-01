@@ -20,10 +20,13 @@
     <string name="desc_undo">Undo</string>
     <string name="desc_redo">Redo</string>
 
+    <!-- Saved images list -->
     <!-- Saved Item List Item Menu -->
     <string name="title_export">Export</string>
     <!-- Saved Item List Item Menu -->
     <string name="desc_export">Export</string>
+    <string name="txt_date">Date</string>
+    <string name="txt_size">Size</string>
 
     <!-- Animation settings -->
     <integer name="slider_animation_duration">300</integer>
@@ -36,6 +39,7 @@
     <string name="title_save_image_from_board">Save image</string>
     <string name="title_save_image_hint_board">Enter name for the image</string>
     <string name="go_to_settings">Go to settings</string>
+    <string name="title_set_canvas_dimension">Set canvas dimensions</string>
 
     <!-- Permission -->
     <string name="permission_write_external_storage"> Write external_storage permission is required for the application to perform this action. Would you like to allow this permission? </string>

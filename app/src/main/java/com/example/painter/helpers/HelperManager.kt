@@ -21,27 +21,9 @@ class HelperManager {
             return dateTimeFormat.format(Date())
         }
 
-//        // skaliranje bitmape
-//        fun getScaledBitmap(bitmap: Bitmap, width: Int, height: Int): Bitmap {
-//
-//            val scaledBitmap: Bitmap = Bitmap.createBitmap(width, height, bitmap.config).copy(Bitmap.Config.ARGB_8888, true)
-//
-//            val canvas2 = Canvas(scaledBitmap)
-//            val cameraScaleFactor = min(height.toFloat() / bitmap.height.toFloat(), height.toFloat() / bitmap.width.toFloat())
-//
-//            canvas2.translate(width.toFloat() / 2 - bitmap.width.toFloat() / 2, height / 2f - bitmap.height / 2f)
-//            canvas2.scale(cameraScaleFactor, cameraScaleFactor, bitmap.width.toFloat() / 2, bitmap.height / 2f)
-//            canvas2.drawBitmap(bitmap, 0f, 0f, null)
-//
-//            return scaledBitmap
-//        }
-//
-//        fun getScaledHeight(originalSize: Size, newWidth: Int): Int {
-//            val newHeight = (originalSize.height / originalSize.width.toFloat()) * newWidth
-//
-//            return newHeight.toInt()
-//        }
-
+        /**
+         *  skaliramo bitmap-u u odredjenoj velicini
+         */
         fun getScaledBitmap(bitmap: Bitmap, width: Int, height: Int = ((bitmap.height.toFloat() / bitmap.width) * width).toInt()): Bitmap {
 
             val scaledBitmap: Bitmap = Bitmap.createBitmap(width, height, bitmap.config)
@@ -73,6 +55,9 @@ class HelperManager {
             return scaledBitmap
         }
 
+        /**
+         *  proveravamo da li je novi api
+         */
         fun isNewApi(): Boolean {
             return Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
         }

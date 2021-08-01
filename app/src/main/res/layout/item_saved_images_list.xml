@@ -63,10 +63,10 @@
                 app:layout_constraintBottom_toBottomOf="@id/gl_bottom_of_thumbnail"
                 app:layout_constraintDimensionRatio="1:1">
 
-                <com.example.painter.custom_components.DrawBoardView
-                    android:id="@+id/view_draw_board"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent" />
+<!--                <com.example.painter.custom_components.DrawBoardView-->
+<!--                    android:id="@+id/view_draw_board"-->
+<!--                    android:layout_width="match_parent"-->
+<!--                    android:layout_height="match_parent" />-->
 
                 <ImageView
                     android:id="@+id/iv_draw_board"

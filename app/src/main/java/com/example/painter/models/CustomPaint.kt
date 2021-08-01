@@ -3,6 +3,9 @@ package com.example.painter.models
 import android.graphics.Color
 import android.graphics.Paint
 
+/**
+ * Podaci za paint koji su nam neophodni za cuvanje
+ */
 data class CustomPaint (
         var strokeWidth: Float = 0f,
         var color: Int = Color.BLACK,

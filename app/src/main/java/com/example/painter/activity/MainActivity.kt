@@ -10,7 +10,6 @@ import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import com.example.painter.R
-import com.example.painter.helpers.PermissionManager
 import com.example.painter.shared_view_models.MainViewModel
 import com.google.android.material.bottomnavigation.BottomNavigationView
 
@@ -56,6 +55,7 @@ class MainActivity : AppCompatActivity() {
         supportActionBar?.hide()
     }
 
+    // ucitavamo sacuvane crteze
     private fun loadSavedDrawings() {
         ViewModelProvider(this).get(MainViewModel::class.java).loadDrawings(this)
     }

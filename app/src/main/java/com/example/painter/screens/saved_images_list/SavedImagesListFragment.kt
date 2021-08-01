@@ -17,8 +17,8 @@ import com.example.painter.adapters.SavedImagesListAdapter
 import com.example.painter.constants.Constants
 import com.example.painter.constants.ProgressMode
 import com.example.painter.databinding.ScreenSavedImagesListBinding
+import com.example.painter.helpers.AlertDialogManager
 import com.example.painter.helpers.HelperManager
-import com.example.painter.helpers.PermissionManager
 import com.example.painter.shared_view_models.MainViewModel
 import com.google.android.material.snackbar.Snackbar
 
@@ -28,7 +28,7 @@ class SavedImagesListFragment : Fragment(), SavedImagesListAdapter.SavedImagesLi
     private var _binding: ScreenSavedImagesListBinding? = null
     private val binding get() = _binding
     private val mainViewModel: MainViewModel by activityViewModels()
-    private var exportImagePosition = -1
+    private var exportImagePosition = -1 // pozicija crteza kojeg eksportujemo
 
     override fun onCreateView(
             inflater: LayoutInflater,
@@ -47,15 +47,17 @@ class SavedImagesListFragment : Fragment(), SavedImagesListAdapter.SavedImagesLi
         setViewModelObservers()
     }
 
+    //
     private fun setViewModelObservers() {
+        // setujemo listu sacuvanih crteza
         mainViewModel.listOfDrawings.observe(viewLifecycleOwner, { savedDrawings ->
 
             savedDrawings?.let {
                 (binding?.rvSavedImagesList?.adapter as? SavedImagesListAdapter?)?.refreshList(it.asReversed())
             }
-
         })
 
+        // osluskujemo mode za progress dok se slika eksportujemo ;; da znamo kada treba da prikazemo/sklonimo loading progress
         mainViewModel.exportImageMode.observe(viewLifecycleOwner, { mode ->
 
             when (mode) {
@@ -79,7 +81,9 @@ class SavedImagesListFragment : Fragment(), SavedImagesListAdapter.SavedImagesLi
         })
     }
 
-    // setovanje adaptera i podataka za prikaz liste
+    /**
+     *  setovanje adaptera i podataka za prikaz liste
+     */
     private fun setSavedImagesList() {
 
         binding?.rvSavedImagesList?.let {
@@ -101,6 +105,9 @@ class SavedImagesListFragment : Fragment(), SavedImagesListAdapter.SavedImagesLi
 
     }
 
+    /**
+     *  eksportujemo sliku ukoliko imamo permisiju ukoliko ne onda je prvo trazimo
+     */
     override fun onExportImageClick(position: Int) {
         // ako je novi api odmah eksportuj sliku
         if (HelperManager.isNewApi())
@@ -112,11 +119,12 @@ class SavedImagesListFragment : Fragment(), SavedImagesListAdapter.SavedImagesLi
 
     }
 
+    // trazimo write permisiju
     private fun requestPermission() {
         storagePermission.launch(Constants.Permission.WriteExternalStorage.PERMISSION)
     }
 
-
+    // write permisija za storege (treba nam za stariji api)
     private val storagePermission =
             registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
                 with(binding?.root) {
@@ -129,12 +137,12 @@ class SavedImagesListFragment : Fragment(), SavedImagesListAdapter.SavedImagesLi
                             //this option is available starting in API 23
                             //Toast.makeText(requireContext(), "Permission denied, show more info!", Toast.LENGTH_SHORT).show()
 
-                            PermissionManager.showPermissionExplanationDialog(this@SavedImagesListFragment, Constants.Permission.WriteExternalStorage.PERMISSION, Constants.Permission.WriteExternalStorage.REQUEST_CODE, getString(R.string.permission_write_external_storage)) { requestPermission() }
+                            AlertDialogManager.showPermissionExplanationDialog(this@SavedImagesListFragment, getString(R.string.permission_write_external_storage)) { requestPermission() }
                         }
                         else -> {
                             //Toast.makeText(requireContext(), "Permission denied", Toast.LENGTH_SHORT).show()
 
-                            PermissionManager.showPermissionDeniedDialog(this@SavedImagesListFragment, Constants.Permission.WriteExternalStorage.PERMISSION, Constants.Permission.WriteExternalStorage.REQUEST_CODE, getString(R.string.permission_write_external_storage_denied), startForResult)
+                            AlertDialogManager.showPermissionDeniedDialog(this@SavedImagesListFragment, getString(R.string.permission_write_external_storage_denied), startForResult)
                         }
                     }
                 }
@@ -147,14 +155,19 @@ class SavedImagesListFragment : Fragment(), SavedImagesListAdapter.SavedImagesLi
         }
     }
 
+    // prikazujemo loading za progress
     private fun showLoading() {
         binding?.clLoadingLayout?.visibility = View.VISIBLE
     }
 
+    // sakiravamo loading za progress
     private fun hideLoading() {
         binding?.clLoadingLayout?.visibility = View.GONE
     }
 
+    /**
+     *  prikazujemo snackbar sa porukom
+     */
     private fun showImageExportedSnackBar() {
         binding?.rvSavedImagesList?.let {
             val snackBar = Snackbar.make(it, getString(R.string.image_saved), Snackbar.LENGTH_SHORT)
@@ -166,6 +179,9 @@ class SavedImagesListFragment : Fragment(), SavedImagesListAdapter.SavedImagesLi
 
     }
 
+    /**
+     *  otvaramo folder downloads
+     */
     private fun openFileLocation() {
         //val intent = Intent(Intent.ACTION_GET_CONTENT)
         //val uri: Uri = Uri.parse(uriString)

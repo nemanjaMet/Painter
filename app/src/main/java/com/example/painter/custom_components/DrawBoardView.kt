@@ -13,38 +13,46 @@ import androidx.core.view.doOnPreDraw
 import com.example.painter.constants.Constants
 import com.example.painter.constants.CustomPathMode
 import com.example.painter.constants.DrawingMode
-import com.example.painter.models.*
+import com.example.painter.models.CanvasSize
+import com.example.painter.models.CustomPaint
+import com.example.painter.models.CustomPath
+import com.example.painter.models.Drawing
 
+/**
+ *  Custom view table koji nam sluzi za crtanje
+ */
 class DrawBoardView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
 
     companion object {
-        private var MAX_PEN_SIZE_WIDTH_PERCENT = 0.05f
+        private var MAX_PEN_SIZE_WIDTH_PERCENT = 0.05f // maksimalna velicina koja olovka/cetkica moze da ima
+        private var MAX_SIZE_OF_BUFFER_UNDO_MOVES = 20 // koliko poslednjih poteza mozemo da vratimo (podatak vezan za undo)
     }
 
-    private var undoPaths = arrayListOf<Drawing>()
+    // lista poteza koju cuvamo kada se koristi undo (iz ove liste vadimo poteze za redo)
+    private var undoDrawings = arrayListOf<Drawing>()
 
-    private var paint = Paint()
+    private var paint = Paint() // trenutna boja ;; koristimo je za crtanje
     private var penSize = 1f // velicina olovke za crtanje
 
-    private var boardColor = Constants.DEFAULT_BOARD_COLOR
-    private var penColor = Constants.DEFAULT_PEN_COLOR
-    private var drawingMode = DrawingMode.PEN
-    private var canvasSize = CanvasSize(0,0)
-    private var isDrawingEnabled = true
+    private var boardColor = Constants.DEFAULT_BOARD_COLOR // boja table
+    private var penColor = Constants.DEFAULT_PEN_COLOR // boja olove ili cetkice
+    private var drawingMode = DrawingMode.PEN // trenutni mode (Pen, Brush ili Rubber)
+    private var canvasSize = CanvasSize(0,0) // velicina canvasa
+    private var isDrawingEnabled = true // fleg koji nam pokazuje da li je omoguceno crtanje na tabli
+    private var numberOfPaintedPathsOnBitmap = 0 // broj poteza koji je iscrtana na bitmap-i (treba nam za undo)
 
-    private var path = CustomPath()
-    private var newDrawing = mutableListOf<Float>()
-    private var painterDrawing = mutableListOf<Drawing>()
-    private var lastPoint = PointF(0f,0f)
-    private val oldPaint = CustomPaint()
-    private var painterCanvas: Canvas? = null
-    private var bitmap: Bitmap? = null
-    private var boardMatrix: Matrix = Matrix()
-    private var boardPaint: Paint = Paint()
+    private var path = CustomPath() // path je jedan potez koji se crta (ovde cuvamo trenutni potez)
+    private var painterDrawing = mutableListOf<Drawing>() // lista poteza za ceo crtez
+    private val oldPaint = CustomPaint() // pomocni objekat za cuvanje podesavanja za paint
+    private var painterCanvas: Canvas? = null // canvas za bitmap-u koju crtamo
+    private var bitmap: Bitmap? = null // bitmapa na kojoj se crtaju potezi
+    private var boardMatrix: Matrix = Matrix() // default-ni objekat matrice za board
+    private var boardPaint: Paint = Paint() // default-ni objekat paint-a za board
 
     init {
+        // setujemo inicijalne podatke
         setPaint()
         setBoardColor()
         initPenSize()
@@ -53,11 +61,13 @@ class DrawBoardView @JvmOverloads constructor(
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         Log.d("onSizeChanged", "newSize: ${Size(w,h)}, oldSize: ${Size(oldw,oldh)}")
 
+        // kreiramo bitmapu odredjene veclicine i kreiramo canvas za nju
         bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888).apply {
             this.eraseColor(boardColor)
             painterCanvas = Canvas(this)
         }
 
+        // ukoliko je velicina canvasa 0, setujemo trenutnu velicinu view-a
         if (canvasSize.width == 0 || canvasSize.height == 0) {
             canvasSize.width = w
             canvasSize.height = h
@@ -69,54 +79,72 @@ class DrawBoardView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
 
-        //canvas?.drawPath(path, paint)
-        //boardCanvas = canvas
-        //scaleBoard(canvas)
-
-        Log.d("drawBoardView", "onDraw")
-
-        //drawBoard(canvas)
         bitmap?.let {
+            // crtamo bitmapu
             canvas?.drawBitmap(it, boardMatrix, boardPaint)
 
             canvas?.save()
+            // skaliramo tablu (ukoliko je promenjena velicina canvasa)
             scaleBoard(canvas)
+            // crtamo poslednjih nekoliko poteza (te poteze crtamo zbog undo funkcionalosti)
+            drawPathsFromBuffer(canvas) /** ovo moze da pravi problem ukoliko je canvas veci a telefoni hardverski slabi **/
+            // trenutni path koji crtamo
             canvas?.drawPath(path.getPath(), paint)
             canvas?.restore()
         }
 
-       //canvas?.drawPath(path.getPath(), paint)
+    }
 
+    /**
+     * Crtamo poslednjih nekoliko poteza ;; Njih iscrtavamo ovako zbog undo funkcionalnosti
+     */
+    private fun drawPathsFromBuffer(canvas: Canvas?) {
+        for (i in numberOfPaintedPathsOnBitmap until painterDrawing.size) {
+
+            val drawing = painterDrawing[i]
+
+            oldPaint.savePaint(paint)
+
+            drawing.paint.setPaint(paint)
+
+            if (drawing.isDeletePath)
+                paint.color = boardColor
+
+            canvas?.drawPath(drawing.path.getPath(), paint)
+
+            oldPaint.setPaint(paint)
+
+        }
     }
 
     // vrsimo kompletno iscrtavanje na tabli
-    private fun drawBoard(canvas: Canvas?) {
-
-        // skaliramo tablu
-        if (!isDrawingEnabled) {
-            scaleBoard(canvas)
-        }
-
-        oldPaint.savePaint(paint)
-
-        for (drawPath in painterDrawing) {
-
-            // ako je ovo path za brisanje onda setujemo boju table za paint
-            if (drawPath.isDeletePath)
-                drawPath.paint.color = boardColor
-
-            drawPath.paint.setPaint(paint)
-
-            painterDrawing.forEach {
-                it.paint.setPaint(paint)
-                canvas?.drawLines(it.points.toFloatArray(), paint)
-            }
-        }
-
-
-        oldPaint.setPaint(paint)
-        canvas?.drawLines(newDrawing.toFloatArray(), paint)
-    }
+//    private fun drawBoard(canvas: Canvas?) {
+//
+//        // skaliramo tablu
+//        if (!isDrawingEnabled) {
+//            scaleBoard(canvas)
+//        }
+//
+//        oldPaint.savePaint(paint)
+//
+//        for (drawPath in painterDrawing) {
+//
+//            // ako je ovo path za brisanje onda setujemo boju table za paint
+//            if (drawPath.isDeletePath)
+//                drawPath.paint.color = boardColor
+//
+//            drawPath.paint.setPaint(paint)
+//
+//            painterDrawing.forEach {
+//                it.paint.setPaint(paint)
+//                canvas?.drawLines(it.points.toFloatArray(), paint)
+//            }
+//        }
+//
+//
+//        oldPaint.setPaint(paint)
+//        canvas?.drawLines(newDrawing.toFloatArray(), paint)
+//    }
 
     private fun drawPathLine() {
         painterCanvas?.save()
@@ -126,20 +154,44 @@ class DrawBoardView @JvmOverloads constructor(
         invalidate()
     }
 
+    /**
+     * Crtamo jedan path (potez) direktno na bitmap-u
+     */
+    private fun drawPathLine(drawing: Drawing, invalidateViewAfterDraw: Boolean = true) {
+        oldPaint.savePaint(paint)
+
+        painterCanvas?.save()
+        scaleBoard(painterCanvas)
+        drawing.paint.setPaint(paint)
+        painterCanvas?.drawPath(drawing.path.getPath(), paint)
+        painterCanvas?.restore()
+
+        oldPaint.setPaint(paint)
+
+        numberOfPaintedPathsOnBitmap++
+
+        if (invalidateViewAfterDraw)
+            invalidate()
+    }
+
+    /**
+     *   F-ja preko koje izvrzava skaliranje matrice za canvas
+     */
     private fun scaleBoard(canvas: Canvas?) {
         val matrix = Matrix()
 
         val wRatio = width.toFloat() / canvasSize.width
         val hRatio = height.toFloat() / canvasSize.height
 
-        //Log.d("drawBoard", "wRatio: $wRatio, hRatio: $hRatio")
 
         matrix.setScale(wRatio, hRatio)
         canvas?.setMatrix(matrix)
 
     }
 
-    // setujemo podeavanja za cetkicu
+    /**
+     *  preko ove f-je setujemo podesavanja za paint u odnosu na selektovani mode (Pen, Brush, Rubber)
+     */
     private fun setPaint(drawMode: DrawingMode = drawingMode) {
         paint.isAntiAlias = true
         paint.style = Paint.Style.STROKE
@@ -150,23 +202,17 @@ class DrawBoardView @JvmOverloads constructor(
 
             DrawingMode.PEN -> {
                 paint.strokeWidth = penSize
-                //paint.color = penColor
-                //paint.alpha = 0xFF
                 paint.color = ColorUtils.setAlphaComponent(penColor, 0xFF)
             }
 
             DrawingMode.BRUSH -> {
                 paint.strokeWidth = penSize
-                //paint.color = penColor
-                //paint.alpha = 0x80
                 paint.color = ColorUtils.setAlphaComponent(penColor, 0x80)
             }
 
             DrawingMode.RUBBER -> {
                 paint.color = boardColor
-                paint.strokeWidth = width * 0.05f
-                //paint.alpha = 0xFF
-                //ColorUtils.setAlphaComponent(penColor, 0xFF)
+                paint.strokeWidth = if (canvasSize.width < canvasSize.height) canvasSize.width * 0.05f else canvasSize.height * 0.05f
             }
 
         }
@@ -174,18 +220,23 @@ class DrawBoardView @JvmOverloads constructor(
 
     }
 
-    // setujemo boju table
+    /**
+     *  setujemo boju za board
+     */
     private fun setBoardColor() {
         setBackgroundColor(boardColor)
     }
 
-    // setujemo pocetnu velicinu olovke
+    /**
+     *  setujemo inicijalnnu velicinu za velicinu olovke/cetkice
+     */
     private fun initPenSize() {
         doOnPreDraw {
             setPenSize(Constants.DEFAULT_PEN_SIZE_PERCENT)
         }
     }
 
+    // touch listener
     override fun onTouchEvent(event: MotionEvent?): Boolean {
 
         if (!isDrawingEnabled)
@@ -206,10 +257,12 @@ class DrawBoardView @JvmOverloads constructor(
             }
         }
 
-        //return super.onTouchEvent(event)
         return true
     }
 
+    /**
+     *  skaliramo tacke u odnosu na velicinu canvasa
+     */
     private fun getScaledPoint(x: Float, y: Float): PointF {
         val scaledX = x * (canvasSize.width / width.toFloat())
         val scaledY = y * (canvasSize.height / height.toFloat())
@@ -217,48 +270,55 @@ class DrawBoardView @JvmOverloads constructor(
         return PointF(scaledX, scaledY)
     }
 
+    // touch start ;; dodajemo startni point
     private fun onTouchStart(x: Float, y: Float) {
 
         // ukoliko postoji lista path-ova unda je klirujemo (ponistavamo undo mogucnost, zato sto je doslo do promena)
-        if (undoPaths.isNotEmpty())
-            undoPaths.clear()
-
-        newDrawing.add(x)
-        newDrawing.add(y)
+        if (undoDrawings.isNotEmpty())
+            undoDrawings.clear()
 
         path.add(PointF(x,y), CustomPathMode.MOVE_TO)
     }
 
+    // touch move ;; pamtimo listu tacaka
     private fun onTouchMove(x: Float, y: Float) {
-        if (lastPoint.x != 0f || lastPoint.y != 0f) {
-            newDrawing.add(lastPoint.x)
-            newDrawing.add(lastPoint.y)
-        }
-
-        newDrawing.add(x)
-        newDrawing.add(y)
-
-        lastPoint.set(x, y)
-
-        //painterCanvas?.drawLines(newDrawing.toFloatArray(), paint)
-
         path.add(PointF(x,y), CustomPathMode.LINE_TO)
-
-        //drawPathLine()
 
         invalidate()
     }
 
+    // touch up ;; crtanje zavrseno i dodajemo poslednji point
     private fun onTouchUp(x: Float, y: Float) {
-        newDrawing.add(x)
-        newDrawing.add(y)
-
-        lastPoint.set(0f,0f)
 
         path.add(PointF(x,y), CustomPathMode.MOVE_TO)
 
-        drawPathLine()
+        // cuvamo trenutni path
         saveCurrentPath()
+        // crtamo path na bitmapi
+        drawPathOnBitmap()
+    }
+
+    /**
+     *  crtamo path-ove (poteze) na bitmapi (ukoliko ima nesto da se crta)
+     */
+    private fun drawPathOnBitmap() {
+
+        val maxIndexOfPathToDraw = painterDrawing.size - MAX_SIZE_OF_BUFFER_UNDO_MOVES
+
+        // crtamo sve poteze bez onih koji su trenutno u baferu (zbog undo funkcionalnosti)
+        while (numberOfPaintedPathsOnBitmap < maxIndexOfPathToDraw) {
+            drawPathLine(painterDrawing[numberOfPaintedPathsOnBitmap])
+        }
+
+    }
+
+    /**
+     *  crtamo sve poteze na bitmapi
+     */
+    private fun drawAllPathsOnBitmap() {
+        while (numberOfPaintedPathsOnBitmap < painterDrawing.size) {
+            drawPathLine(painterDrawing[numberOfPaintedPathsOnBitmap], false)
+        }
     }
 
     // menjamo boju table
@@ -270,6 +330,7 @@ class DrawBoardView @JvmOverloads constructor(
         invalidate()
     }
 
+    // pomocna funkcija koja nam govori da li selektovana gumica
     private fun isRubberSelected(): Boolean {
         return drawingMode == DrawingMode.RUBBER
     }
@@ -303,17 +364,19 @@ class DrawBoardView @JvmOverloads constructor(
         setPaint()
     }
 
+    // vracamo boju olovke/cetkice
     fun getPenColor(): Int {
         return penColor
     }
 
-    // cuvamo trenutni path za crtanje u listu
+    /**
+     *  cuvamo trenutni path za crtanje u listu
+     */
     private fun saveCurrentPath() {
-        if (newDrawing.isNotEmpty()) {
-            painterDrawing.add(Drawing(newDrawing, CustomPaint(paint.strokeWidth, paint.color, paint.alpha), isRubberSelected(), path.copy()))
+        if (!path.isEmpty()) {
+            painterDrawing.add(Drawing(CustomPaint(paint.strokeWidth, paint.color, paint.alpha), isRubberSelected(), path.copy()))
 
             path.reset()
-            newDrawing = mutableListOf()
         }
 
     }
@@ -324,20 +387,27 @@ class DrawBoardView @JvmOverloads constructor(
         setPaint()
     }
 
+    /**
+     *  undo funkcionalnost
+     */
     fun undo() {
-
-        if (painterDrawing.isNotEmpty()) {
+        // proveravamo da li je undo dostupan
+        if (painterDrawing.isNotEmpty() && undoDrawings.size < MAX_SIZE_OF_BUFFER_UNDO_MOVES) {
             val lastPath = painterDrawing.removeLast()
 
-            undoPaths.add(lastPath)
+            undoDrawings.add(lastPath)
 
             invalidate()
         }
     }
 
+    /**
+     *  redo funkcionalnost
+     */
     fun redo() {
-        if (undoPaths.isNotEmpty()) {
-            val lastPath = undoPaths.removeLast()
+        // proveravamo da li je redo dostupan
+        if (undoDrawings.isNotEmpty()) {
+            val lastPath = undoDrawings.removeLast()
 
             painterDrawing.add(lastPath)
 
@@ -345,25 +415,42 @@ class DrawBoardView @JvmOverloads constructor(
         }
     }
 
+    /**
+     *  brisemo celu tablu
+     */
     fun clearBoard() {
-        painterDrawing = mutableListOf() // .clear()
-        newDrawing.clear()
+        painterDrawing = mutableListOf()
+        numberOfPaintedPathsOnBitmap = 0
+        painterCanvas?.drawColor(boardColor)
         invalidate()
     }
 
+    /**
+     *  vracamo listu zapamcenih poteza
+     */
     fun getDrawing(): MutableList<Drawing> {
         return painterDrawing
     }
 
+    /**
+     *  setujemo listu trenutnih crteza
+     */
     fun setDrawing(drawingToDraw: MutableList<Drawing>) {
-        painterDrawing.clear()
-        newDrawing.clear()
 
+        if (drawingToDraw.isEmpty())
+            return
+
+        // brisemo celu tablu
+        clearBoard()
+
+        // setujemo listu poteza (path)
         painterDrawing.addAll(drawingToDraw)
+
+        // crtamo sve to na bitmap-u
+        drawPathOnBitmap()
 
         invalidate()
     }
-
 
     fun setPaint(newPaint: Paint) {
         paint = newPaint
@@ -373,20 +460,37 @@ class DrawBoardView @JvmOverloads constructor(
         isDrawingEnabled = isEnabled
     }
 
+    /**
+     *  setujemo velicinu canvasa
+     */
     fun setCanvasSize(size: CanvasSize) {
         canvasSize = size
+
+        //clearBoard()
 
         setCanvasAspectRatio()
     }
 
+    /**
+     *  vracamo velicinu trenutnog canvasa
+     */
     fun getCanvasSize(): CanvasSize {
         return canvasSize
     }
 
+    /**
+     *  vracamo trenutnu bitmap-u
+     */
     fun getBitmap(): Bitmap? {
-        return bitmap
+        // crtamo path-ove koji su nam u baferu i vracamo kompletnu kopiju bitmape
+        drawAllPathsOnBitmap()
+
+        return bitmap?.copy(bitmap?.config, false)
     }
 
+    /**
+     *  setujemo aspect za canvas
+     */
     private fun setCanvasAspectRatio() {
 
         val layoutParams = ConstraintLayout.LayoutParams(0, 0)

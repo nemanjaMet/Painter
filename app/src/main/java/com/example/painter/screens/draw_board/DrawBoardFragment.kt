@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
+import androidx.core.content.ContextCompat
 import androidx.core.view.doOnPreDraw
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -48,21 +49,36 @@ class DrawBoardFragment : Fragment() {
         setOnClickListeners()
         setViewModelObservers()
         initSlider()
+        setCurrentSavedDrawings()
     }
 
+    /**
+     *  setujemo trenutno sacuvanu listu poteza, ukoliko dodje do promene orijentacije telefona
+     */
+    private fun setCurrentSavedDrawings() {
+        binding?.viewDrawBoard?.setDrawing(viewModel.savedDrawing)
+    }
+
+    /**
+     *  osluskujemo promene podataka iz viewModela
+     */
     private fun setViewModelObservers() {
-        viewModel.penColorLiveData.observe(viewLifecycleOwner, {
+        // setujemo boju za olovku ili cetkicu
+        viewModel.penColor.observe(viewLifecycleOwner, {
             binding?.viewDrawBoard?.setPenColor(it)
         })
 
-        viewModel.penSizePercentLiveData.observe(viewLifecycleOwner, {
+        // setujemo velicinu boje ili cetkice
+        viewModel.penSizePercent.observe(viewLifecycleOwner, {
             binding?.viewDrawBoard?.setPenSize(it)
         })
 
+        // setujemo velicinu za canvas
         viewModel.canvasSize.observe(viewLifecycleOwner, {
             binding?.viewDrawBoard?.setCanvasSize(it)
         })
 
+        // loading (progress) koji prikazujemo kada sacuvamo crtez
         mainViewModel.savingProgressMode.observe(viewLifecycleOwner, {
 
             when(it) {
@@ -83,22 +99,28 @@ class DrawBoardFragment : Fragment() {
         })
     }
 
+    /**
+     *  setujemo click listenere za dugmice
+     */
     private fun setOnClickListeners() {
         setToolbarClickListener()
 
-//        binding?.btnShowHideBoardMenu?.setOnClickListener {
-//            onShowHideBoardMenuClick()
-//        }
 
         binding?.btnSelectPen?.setOnClickListener {
+            resetSelectedButtons()
+            binding?.btnSelectPen?.background = ContextCompat.getDrawable(requireContext(), R.drawable.selected_button)
             onSelectPenClick()
         }
 
         binding?.btnSelectBrush?.setOnClickListener {
+            resetSelectedButtons()
+            binding?.btnSelectBrush?.background = ContextCompat.getDrawable(requireContext(), R.drawable.selected_button)
             onSelectBrushClick()
         }
 
         binding?.btnSelectRubber?.setOnClickListener {
+            resetSelectedButtons()
+            binding?.btnSelectRubber?.background = ContextCompat.getDrawable(requireContext(), R.drawable.selected_button)
             onSelectRubberClick()
         }
 
@@ -124,22 +146,36 @@ class DrawBoardFragment : Fragment() {
         }
     }
 
+    // selektujemo olovku
     private fun onSelectPenClick() {
         binding?.viewDrawBoard?.selectPen()
     }
 
+    // selektujemo cetkicu
     private fun onSelectBrushClick() {
         binding?.viewDrawBoard?.selectBrush()
     }
 
+    // selektujemo gumicu
     private fun onSelectRubberClick() {
         binding?.viewDrawBoard?.selectRubber()
     }
 
+    // otvaramo color picker
     private fun onColorPickerClick() {
         openColorPicker()
     }
 
+    // deselektujemo sve dugmice
+    private fun resetSelectedButtons() {
+        binding?.btnSelectPen?.background = null
+        binding?.btnSelectBrush?.background = null
+        binding?.btnSelectRubber?.background = null
+    }
+
+    /**
+     *  Otvaramo dialog za setovanje titl-a i cuvamo trenutni crtez
+     */
     private fun onSaveBoardClick() {
 
         AlertDialogManager.openAlertDialogWithInputField(requireContext(), getString(R.string.title_save_image_from_board), getString(R.string.title_save_image_hint_board), object: AlertDialogManager.Companion.AlertDialogListener {
@@ -148,14 +184,10 @@ class DrawBoardFragment : Fragment() {
                 if (requestCode == AlertDialogManager.GET_SAVED_IMAGE_NAME) {
                     binding?.viewDrawBoard?.let {  board ->
 
-                        val canvasSize = board.getCanvasSize() // board.width, board.height
-
-                        //mainViewModel.addNewDrawing(board.getDrawing(), value, canvasSize)
-                        //mainViewModel.saveDrawings(requireContext())
-
+                        val canvasSize = board.getCanvasSize()
                         mainViewModel.saveNewDrawing(requireContext(), board.getDrawing(), value, canvasSize, board.getBitmap())
-
                         board.clearBoard()
+
                     }
                 }
 
@@ -165,50 +197,16 @@ class DrawBoardFragment : Fragment() {
 
     }
 
+    /**
+     *  Otvaramo dialog za setovanje velicine za canvas
+     */
     private fun onSetCanvasSizeClick() {
-//        mainViewModel.listOfDrawings.value?.let {
-//            val sd = it
-//            val drawings = it[8].drawings
-//            binding?.viewDrawBoard?.setDrawing(drawings)
-//
-//            //binding?.viewDrawBoard?.setPaint(drawings[0].paint)
-//
-//        }
-
-//        binding?.viewDrawBoard?.getBitmap()?.let { b ->
-//            mainViewModel.createThumbnail(requireContext(), b)
-//        }
-
-        //mainViewModel.createSavedDrawings()
-
-
-//        mainViewModel.listOfDrawings.value?.let {
-//            GlobalScope.launch(Dispatchers.IO) {
-//
-//                val drawings = it[0].drawings
-//
-//                //drawings.forEach { it.setPathFromCustomPath() }
-//
-//                var i = 0
-//                var pSize = 0
-//                drawings.forEach { drawPath ->
-//                    drawPath.customPath.getPath()
-//                    pSize += drawPath.customPath.getSize()
-//                    i++
-//                }
-//
-//                launch(Dispatchers.Main) {
-//
-//                    Log.d("setDrawing", "finished with $i paths, pSize: $pSize")
-//                }
-//
-//            }
-//        }
-
-
         openSetDimensionPopup()
     }
 
+    /**
+     *  otvaramo color picker
+     */
     private fun openColorPicker() {
         val currentColor = binding?.viewDrawBoard?.getPenColor() ?: Constants.DEFAULT_PEN_COLOR
 
@@ -230,10 +228,7 @@ class DrawBoardFragment : Fragment() {
 
         colorPickerDialog.colorPickerView.setInitialColor(currentColor)
 
-
-
         colorPickerDialog.show()
-
     }
 
     // animacija za prikaz slider-a
@@ -280,6 +275,9 @@ class DrawBoardFragment : Fragment() {
         binding?.sliderPenSize?.addOnChangeListener(Slider.OnChangeListener { slider, value, fromUser -> viewModel.setPenSizePercent(value) })
     }
 
+    /**
+     *  setujemo toolbar click listener za undo i redo
+     */
     private fun setToolbarClickListener () {
         binding?.toolbar?.setOnMenuItemClickListener { menuItem ->
 
@@ -297,10 +295,13 @@ class DrawBoardFragment : Fragment() {
         }
     }
 
+    /**
+     *  otvaramo popup za setovanje dimenzija za canvas
+     */
     private fun openSetDimensionPopup() {
 
         val builder = AlertDialog.Builder(requireContext()) // , R.style.CustomDialogTheme
-        builder.setTitle("Set canvas dimensions")
+        builder.setTitle(getString(R.string.title_set_canvas_dimension))
         builder.setMessage("")
 
         val insertDimensionView = layoutInflater.inflate(R.layout.dialog_insert_dimensions, null)
@@ -321,9 +322,7 @@ class DrawBoardFragment : Fragment() {
                 showMessageInSnackBar(getString(R.string.error_invalid_height))
             else
                 viewModel.setCanvasSize(canvasSize)
-
         }
-
 
         builder.setNegativeButton(requireContext().resources.getString(R.string.cancel_button)) { _, _ ->
 
@@ -333,20 +332,31 @@ class DrawBoardFragment : Fragment() {
 
     }
 
+    /**
+     *  prikazujemo poruku u snackbar
+     */
     private fun showMessageInSnackBar(message: String) {
         binding?.btnSetCanvasSize?.let {
             val snackBar = Snackbar.make(it, message, Snackbar.LENGTH_SHORT)
             snackBar.show()
         }
-
     }
 
+    // prikazujemo loading progress
     private fun showLoading() {
         binding?.clLoadingLayout?.visibility = View.VISIBLE
     }
 
+    // uklanjamo loading progress
     private fun hideLoading() {
         binding?.clLoadingLayout?.visibility = View.GONE
+    }
+
+    // setujemo listu path-ova koja se nalazi u tabli (zbog promene orijentacije)
+    override fun onPause() {
+        viewModel.savedDrawing = binding?.viewDrawBoard?.getDrawing() ?: mutableListOf()
+
+        super.onPause()
     }
 
 }

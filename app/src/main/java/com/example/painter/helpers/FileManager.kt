@@ -14,6 +14,9 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStream
 
+/**
+ *  Pomocna klasa za rad sa fajlovima
+ */
 class FileManager {
 
     companion object {
@@ -24,6 +27,9 @@ class FileManager {
             return File(context.filesDir, (Constants.SAVED_DRAWINGS_FILE_NAME))
         }
 
+        /**
+         *  ucitavamo listu sacuvanih crteza
+         */
         fun loadSavedImagesList(file: File): String {
 
             var json = ""
@@ -43,6 +49,9 @@ class FileManager {
 
         }
 
+        /**
+         *  cuvamo listu crteza u fajl
+         */
         fun saveImageList(file: File, json: String): Boolean {
 
             try {
@@ -64,6 +73,9 @@ class FileManager {
 
         }
 
+        /**
+         *  brisemo odredjene fajlove
+         */
         fun deleteFile(context: Context, paths: List<String?>) {
             if (paths.isNotEmpty()) {
                 paths.forEach { path ->
@@ -93,6 +105,9 @@ class FileManager {
             }
         }
 
+        /**
+         *  cuvamo sliku na odredjenoj lokaciji
+         */
         fun exportImage(context: Context, bitmap: Bitmap): String {
 
             try {
@@ -147,6 +162,9 @@ class FileManager {
             return ""
         }
 
+        /**
+         *  cuvamo thumbnail na odredjenoj lokaciji
+         */
         fun saveThumbnail(context: Context, bitmap: Bitmap): String {
 
             try {

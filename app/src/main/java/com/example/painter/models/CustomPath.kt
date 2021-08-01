@@ -5,6 +5,9 @@ import android.graphics.PointF
 import android.util.Log
 import com.example.painter.constants.CustomPathMode
 
+/**
+ * Custom path gde cuvamo tacke i mode crtanja kako bi znali kako da kreiramo path
+ */
 data class CustomPath (
         private var points: MutableList<PointF> = mutableListOf(),
         private var drawModes: MutableList<CustomPathMode> = mutableListOf()
